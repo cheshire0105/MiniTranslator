@@ -1,0 +1,34 @@
+# Xcode 및 빌드 관련 파일들
+
+# 빌드 폴더 및 DerivedData (Xcode에서 자동 생성하는 임시 파일)
+build/
+DerivedData/
+
+# 사용자별 설정 파일 (개인 정보가 포함된 설정은 공유할 필요 없음)
+xcuserdata/
+*.xcuserstate
+
+# Xcode 프로젝트 내부의 사용자 전용 파일들
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# 이동되었거나 임시로 생성된 파일들
+*.moved-aside
+
+# Swift Package Manager에서 생성하는 빌드 산출물
+.build/
+
+# Carthage 빌드 결과물 (사용하는 경우)
+Carthage/Build/
+
+# CocoaPods를 사용한다면 (보통은 Podfile.lock은 추적하지만, Pods 폴더는 선택적으로 무시)
+# Pods/
+
+# macOS 시스템 파일 (Finder 등에서 생성되는 숨김 파일)
+.DS_Store
