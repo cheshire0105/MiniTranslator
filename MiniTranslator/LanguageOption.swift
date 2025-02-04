@@ -7,9 +7,9 @@
 
 import SwiftUI
 import Translation
-import AppKit // 클립보드 복사를 위해 필요
+import AppKit // 클립보드 복사용
 
-// 커스텀 언어 옵션 타입: 표시할 이름과 실제 Locale.Language 값을 함께 보관
+/// 커스텀 언어 옵션 타입: 표시할 이름과 실제 Locale.Language 값을 함께 보관
 struct LanguageOption: Identifiable, Hashable {
     let id: String         // 예: "ko", "en", "ja", "zh-Hans"
     let displayName: String
@@ -24,14 +24,12 @@ struct TranslatorContentView: View {
 
     /// TranslationSession.Configuration을 관리할 상태 변수
     @State private var translationConfig: TranslationSession.Configuration?
-
     /// 번역 요청마다 변경될 고유 id (새 configuration 변경 인식용)
     @State private var translationRequestId: Int = 0
-
     /// 앱 종료 알림 표시 여부
     @State private var showExitAlert: Bool = false
 
-    // 커스텀 언어 옵션 배열 (예시: 한국어, 영어, 일본어, 중국어 간체)
+    // 언어 옵션 배열 (예시: 한국어, 영어, 일본어, 중국어 간체)
     private static let languageOptions: [LanguageOption] = [
         LanguageOption(id: "ko", displayName: "한국어", language: Locale.Language(identifier: "ko")),
         LanguageOption(id: "en", displayName: "English", language: Locale.Language(identifier: "en")),
@@ -39,95 +37,106 @@ struct TranslatorContentView: View {
         LanguageOption(id: "zh-Hans", displayName: "中文", language: Locale.Language(identifier: "zh-Hans"))
     ]
 
-    // 다중 언어 지원을 위한 선택 상태 (초기값은 languageOptions 배열의 값 사용)
+    // 다중 언어 지원을 위한 선택 상태
     @State private var sourceOption: LanguageOption = TranslatorContentView.languageOptions[0]
     @State private var targetOption: LanguageOption = TranslatorContentView.languageOptions[1]
 
     var body: some View {
         VStack(spacing: 12) {
-            // 0) 언어 선택 영역 및 앱 종료 버튼을 포함한 상단 영역
+            // 헤더: 제목과 종료 버튼
             HStack {
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("원본 언어:")
-                        Picker("원본 언어", selection: $sourceOption) {
-                            ForEach(Self.languageOptions) { option in
-                                Text(option.displayName).tag(option)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(maxWidth: 100)
-                    }
-                    HStack {
-                        Text("번역 언어:")
-                        Picker("번역 언어", selection: $targetOption) {
-                            ForEach(Self.languageOptions) { option in
-                                Text(option.displayName).tag(option)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(maxWidth: 100)
-                    }
-                }
+                Text("Mini Translator")
+                    .font(.headline)
                 Spacer()
-                // 앱 종료 버튼: 오른쪽 상단에 배치
-                Button(action: {
+                Button {
                     showExitAlert = true
-                }) {
-                    Label("종료", systemImage: "xmark.circle.fill")
-                        .font(.headline)
-                        .foregroundColor(.red)
-                        .padding(6)
-                        .background(Color.red.opacity(0.2))
-                        .cornerRadius(6)
+                } label: {
+                    Image(systemName: "xmark.circle")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(BorderlessButtonStyle())
             }
 
-            // 1) 사용자 입력 필드
-            TextField("번역할 내용을 입력하세요.", text: $inputText, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit {
-                    triggerTranslation()
+            // 입력 필드
+            TextField("번역할 내용을 입력하세요.", text: $inputText)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .onSubmit { triggerTranslation() }
+
+            // 언어 선택 영역 (원본과 번역 피커, 스왑 버튼 포함)
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("원본")
+                        .font(.caption)
+                    Picker("", selection: $sourceOption) {
+                        ForEach(Self.languageOptions) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(MenuPickerStyle())
                 }
 
-            // 2) 번역 결과 + 복사 버튼
-            HStack(alignment: .top, spacing: 8) {
+                Button {
+                    swap(&sourceOption, &targetOption)
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right")
+                }
+                .buttonStyle(BorderlessButtonStyle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("번역")
+                        .font(.caption)
+                    Picker("", selection: $targetOption) {
+                        ForEach(Self.languageOptions) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(MenuPickerStyle())
+                }
+            }
+
+            // 번역 결과 영역 (클립보드 복사 버튼 추가)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("번역 결과:")
+                        .font(.subheadline)
+                    Spacer()
+                    if !translatedText.isEmpty {
+                        Button {
+                            copyToClipboard(translatedText)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                    }
+                }
                 ScrollView {
                     Text(translatedText)
-                        .lineLimit(nil)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(4)
-                        .background(Color.gray.opacity(0.1))
                 }
-                .frame(minHeight: 60, maxHeight: 200)
-
-                if !translatedText.isEmpty {
-                    Button(action: {
-                        copyToClipboard(translatedText)
-                    }) {
-                        Image(systemName: "doc.on.doc")
-                    }
-                    .buttonStyle(.plain)
-                    .help("클립보드에 복사")
-                }
+                .frame(height: 80)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray, lineWidth: 1))
             }
 
-            // 3) 수동 번역 버튼
-            Button("번역하기") {
-                triggerTranslation()
+            // 번역 및 초기화 버튼 영역
+            HStack(spacing: 8) {
+                Button("초기화") { reset() }
+                    .buttonStyle(DefaultButtonStyle())
+                Button("번역하기") { triggerTranslation() }
+                    .buttonStyle(DefaultButtonStyle())
             }
 
-            // 4) 에러 메시지 표시
+            // 에러 메시지 표시
             if let errorMessage {
                 Text("에러: \(errorMessage)")
                     .foregroundColor(.red)
-                    .font(.footnote)
+                    .font(.caption)
             }
         }
-        .padding(12)
-        .frame(width: 280)
-        // configuration이 변경될 때마다 id가 바뀌도록 해서 새로운 번역 세션을 강제합니다.
+        .padding()
+        .frame(width: 300)
+        // 번역 세션 실행 (configuration 변경 시 새로운 번역 작업 시작)
         .translationTask(translationConfig) { session in
             Task {
                 guard !inputText.isEmpty else { return }
@@ -141,34 +150,37 @@ struct TranslatorContentView: View {
             }
         }
         .id(translationRequestId)
-        // 앱 종료 알림 표시
+        // 앱 종료 알림
         .alert("앱 종료", isPresented: $showExitAlert) {
             Button("취소", role: .cancel) { }
-            Button("종료", role: .destructive) {
-                NSApplication.shared.terminate(nil)
-            }
+            Button("종료", role: .destructive) { NSApplication.shared.terminate(nil) }
         } message: {
             Text("정말로 앱을 종료하시겠습니까?")
         }
     }
 
-    // MARK: - 번역 트리거 및 클립보드 복사 메서드
+    // 번역 트리거 메서드
     @available(macOS 15.0, *)
     private func triggerTranslation() {
-        // 이전 번역 결과 및 에러 메시지 초기화
         translatedText = ""
         errorMessage = nil
-
-        // 고유 id를 증가시켜 뷰의 변경을 강제합니다.
         translationRequestId += 1
-
-        // 새로운 TranslationSession.Configuration 인스턴스를 동기적으로 생성하여 할당
         translationConfig = TranslationSession.Configuration(
             source: sourceOption.language,
             target: targetOption.language
         )
     }
 
+    // 초기화 메서드: 입력 필드, 번역 결과, 에러 메시지를 초기화합니다.
+    @available(macOS 15.0, *)
+    private func reset() {
+        inputText = ""
+        translatedText = ""
+        errorMessage = nil
+        translationConfig = nil
+    }
+
+    // 클립보드 복사 메서드
     @available(macOS 15.0, *)
     private func copyToClipboard(_ text: String) {
         let pasteBoard = NSPasteboard.general
