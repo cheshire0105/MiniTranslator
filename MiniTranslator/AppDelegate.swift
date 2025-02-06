@@ -2,20 +2,12 @@
 //  AppDelegate.swift
 //  MiniTranslator
 //
-//  Created by cheshire on 2/1/25.
-//
-
-
-//
-//  AppDelegate.swift
-//  MiniTranslator
-//
 //  Created by cheshire on 1/29/25.
 //
 
 import Cocoa
 import SwiftUI
-import Translation // WWDC24 번역 API를 사용한다고 가정
+import Translation // WWDC24 번역 API
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!

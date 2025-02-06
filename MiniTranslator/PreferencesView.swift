@@ -5,14 +5,6 @@
 //  Created by cheshire on 2/1/25.
 //
 
-
-//
-//  PreferencesView.swift
-//  MiniTranslator
-//
-//  Created by cheshire on 2/1/25.
-//
-
 import SwiftUI
 
 @available(macOS 15.0, *)
