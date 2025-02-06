@@ -20,6 +20,8 @@ struct LanguageOption: Identifiable, Hashable {
 struct TranslatorContentView: View {
     @State private var inputText: String = ""
     @State private var translatedText: String = ""
+
+    /// "모든 에러 상황"에서 공통으로 표시할 에러 메시지를 담는 변수
     @State private var errorMessage: String?
 
     /// TranslationSession.Configuration을 관리할 상태 변수
@@ -28,6 +30,14 @@ struct TranslatorContentView: View {
     @State private var translationRequestId: Int = 0
     /// 앱 종료 알림 표시 여부
     @State private var showExitAlert: Bool = false
+    /// 모델 다운로드 완료 알림 표시 여부
+    @State private var showDownloadCompleteAlert: Bool = false
+
+    /// 모델 다운로드가 끝나면, 실패했던 번역을 재시도할지 여부
+    @State private var needToRetryTranslation: Bool = false
+
+    /// **모델 다운로드 알림을 이미 한 번 표시했는지** 여부
+    @State private var didShowDownloadAlert: Bool = false
 
     // 언어 옵션 배열 (예시: 한국어, 영어, 일본어, 중국어 간체)
     private static let languageOptions: [LanguageOption] = [
@@ -127,9 +137,9 @@ struct TranslatorContentView: View {
                     .buttonStyle(DefaultButtonStyle())
             }
 
-            // 에러 메시지 표시
+            // 에러 메시지 표시 (모든 에러 상황은 고정된 메시지로 표시)
             if let errorMessage {
-                Text("에러: \(errorMessage)")
+                Text(errorMessage)
                     .foregroundColor(.red)
                     .font(.caption)
             }
@@ -144,8 +154,11 @@ struct TranslatorContentView: View {
                     let response = try await session.translate(inputText)
                     translatedText = response.targetText
                     errorMessage = nil
+                    needToRetryTranslation = false  // 정상 번역 성공했으므로 재시도 불필요
                 } catch {
-                    errorMessage = error.localizedDescription
+                    // 모든 에러 상황에 대해 고정된 메시지를 표시합니다.
+                    errorMessage = "번역을 위한 모델을 다운로드 중 입니다. 잠시만 기다려주세요."
+                    needToRetryTranslation = true  // 모델 다운로드 후 재시도 필요
                 }
             }
         }
@@ -157,6 +170,12 @@ struct TranslatorContentView: View {
         } message: {
             Text("정말로 앱을 종료하시겠습니까?")
         }
+        // 모델 다운로드 완료 알림 (최초 한 번만 표시)
+        .alert("모델 다운로드 완료", isPresented: $showDownloadCompleteAlert) {
+            Button("확인") { }
+        } message: {
+            Text("번역 모델 다운로드가 완료되었습니다.")
+        }
     }
 
     // 번역 트리거 메서드
@@ -164,11 +183,51 @@ struct TranslatorContentView: View {
     private func triggerTranslation() {
         translatedText = ""
         errorMessage = nil
+
+        // Session 업데이트(새로운 translationTask 트리거)
         translationRequestId += 1
         translationConfig = TranslationSession.Configuration(
             source: sourceOption.language,
             target: targetOption.language
         )
+
+        // 모델 다운로드 상태를 폴링하여 완료되면 알림을 띄우고
+        // 이전에 실패한 번역이 있다면 재시도
+        Task {
+            let availability = LanguageAvailability()
+            while true {
+                let status = await availability.status(from: sourceOption.language, to: targetOption.language)
+
+                // 모델이 실제로 설치되어야만(= .installed) 처리를 진행
+                if status == .installed {
+                    await MainActor.run {
+                        // 이전에 알림을 띄운 적이 없다면 알림 표시
+                        if !didShowDownloadAlert {
+                            showDownloadCompleteAlert = true
+                            didShowDownloadAlert = true  // 이후엔 알림 띄우지 않도록
+                        }
+
+                        // 모델 설치된 시점에, 재번역이 필요하면 invalidate()
+                        if needToRetryTranslation {
+                            translationConfig?.invalidate()
+                        }
+                    }
+                    break
+                }
+
+                // unsupported 상태이면 반복 중단(등 처리)
+                if status == .unsupported {
+                    await MainActor.run {
+                        errorMessage = "이 언어 페어링은 지원되지 않습니다."
+                    }
+                    break
+                }
+
+                // supported 는 단순히 “다운로드 가능하나 아직 설치 안 됨”
+                // 계속 대기 후 다음 루프
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1초 대기
+            }
+        }
     }
 
     // 초기화 메서드: 입력 필드, 번역 결과, 에러 메시지를 초기화합니다.
@@ -178,6 +237,9 @@ struct TranslatorContentView: View {
         translatedText = ""
         errorMessage = nil
         translationConfig = nil
+        needToRetryTranslation = false
+        // 여기서 didShowDownloadAlert = false 로 다시 만들지는 않음
+        //    (원한다면, 사용자가 초기화할 때 다시 다운로드 알림을 띄우도록 할 수도 있습니다.)
     }
 
     // 클립보드 복사 메서드
