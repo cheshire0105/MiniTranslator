@@ -1,10 +1,3 @@
-//
-//  PreferencesView.swift
-//  MiniTranslator
-//
-//  Created by cheshire on 2/1/25.
-//
-
 import SwiftUI
 
 @available(macOS 15.0, *)
@@ -20,77 +13,52 @@ struct PreferencesView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .padding()
-        .frame(width: 400, height: 350)
+        // 전반적인 탭 뷰 크기 조정 (필요에 맞게 수정 가능)
+        .frame(width: 380, height: 320)
     }
 }
 
+// MARK: - SettingsView
 @available(macOS 15.0, *)
 struct SettingsView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("설정")
-                .font(.largeTitle)
+                .font(.title)
                 .bold()
 
-            Text("언어 프레임워크 삭제 방법")
-                .font(.title2)
-                .padding(.bottom, 4)
+            // 언어 프레임워크 삭제 안내
+            VStack(alignment: .leading, spacing: 8) {
+                Text("언어 프레임워크 삭제 방법")
+                    .font(.headline)
 
-            VStack(alignment: .leading, spacing: 12) {
-                // 1단계
-                HStack(alignment: .top, spacing: 8) {
-                    Text("1.")
-                        .fontWeight(.bold)
-                        .frame(width: 24, alignment: .leading)
-                    Text("시스템 설정에서 **일반** 탭으로 이동합니다.")
-                        .fixedSize(horizontal: false, vertical: true)
+                // 단계별 안내를 라벨(아이콘) 형태로 간소화
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("시스템 설정에서 **일반** 탭으로 이동합니다.", systemImage: "1.circle.fill")
+                    Label("**언어 및 지역** 설정을 선택합니다.", systemImage: "2.circle.fill")
+                    Label("**번역 언어** 옵션에서 삭제할 언어 프레임워크를 선택합니다.", systemImage: "3.circle.fill")
+                    Label("삭제 확인 후, 해당 언어 프레임워크가 제거됩니다.", systemImage: "4.circle.fill")
                 }
-                // 2단계
-                HStack(alignment: .top, spacing: 8) {
-                    Text("2.")
-                        .fontWeight(.bold)
-                        .frame(width: 24, alignment: .leading)
-                    Text("**언어 및 지역** 설정을 선택합니다.")
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // 3단계
-                HStack(alignment: .top, spacing: 8) {
-                    Text("3.")
-                        .fontWeight(.bold)
-                        .frame(width: 24, alignment: .leading)
-                    Text("**번역 언어** 옵션에서 삭제할 언어 프레임워크를 선택합니다.")
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // 4단계
-                HStack(alignment: .top, spacing: 8) {
-                    Text("4.")
-                        .fontWeight(.bold)
-                        .frame(width: 24, alignment: .leading)
-                    Text("삭제 확인 후, 해당 언어 프레임워크가 제거됩니다.")
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                .font(.body)
+                .foregroundColor(.secondary)
             }
-            .font(.body)
-            .foregroundColor(.secondary)
 
             Divider()
 
-            // 단축키 안내 섹션 추가
+            // 단축키 안내 섹션
             VStack(alignment: .leading, spacing: 8) {
                 Text("단축키 안내")
-                    .font(.title2)
-                    .padding(.bottom, 4)
-                HStack {
-                    Text("번역 초기화:")
-                        .bold()
-                    Text("Command + D")
+                    .font(.headline)
+
+                // 구체적인 단축키 설명
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• 번역 초기화: Command + D")
+                        .font(.callout)
+                    Text("해당 단축키를 누르면 입력 필드와 번역 결과가 초기화되며, 입력 필드에 자동 포커스가 이동합니다.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text("해당 단축키를 누르면 입력 필드와 번역 결과가 초기화되며, 입력 필드에 자동으로 포커스가 이동합니다.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    // 텍스트가 줄바꿈되도록 고정 사이즈 모디파이어 추가
-                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -99,11 +67,11 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - AboutView
 @available(macOS 15.0, *)
 struct AboutView: View {
     var body: some View {
         VStack(spacing: 16) {
-            // 앱 정보 제목 영역
             Text("MiniTranslator")
                 .font(.title)
                 .bold()
@@ -114,30 +82,25 @@ struct AboutView: View {
 
             Divider()
 
-            // 개발자 정보 영역
-            VStack(spacing: 4) {
-                HStack {
-                    Text("개발자:")
-                        .bold()
-                    Text("cheshire")
-                }
-
-                // 홈페이지 링크
-                HStack {
+            // 개발자 정보
+            VStack(spacing: 6) {
+                Label("cheshire", systemImage: "person.fill")
+                    .font(.subheadline)
+                HStack(spacing: 4) {
+                    Image(systemName: "globe")
                     Text("홈페이지:")
-                        .bold()
                     Link("방문하기", destination: URL(string: "https://bento.me/cheshire0105")!)
-                        .foregroundColor(.blue)
                 }
+                .font(.subheadline)
             }
-            .font(.subheadline)
 
             Divider()
 
-            // 앱 설명 영역
+            // 앱 설명
             Text("이 앱은 Apple의 Translation API를 사용하여 오프라인 번역 기능을 제공합니다. (초기 번역 모델은 온라인 다운로드가 필요합니다.)")
-                .font(.body)
+                .font(.footnote)
                 .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
                 .padding(.horizontal)
 
             Spacer()

@@ -61,102 +61,108 @@ struct TranslatorContentView: View {
     @State private var targetOption: LanguageOption = TranslatorContentView.languageOptions[1]
 
     var body: some View {
-        VStack(spacing: 12) {
-            // 헤더: 제목과 종료 버튼
+        VStack(spacing: 10) {
+            // 상단 헤더: 앱 타이틀 + 종료 버튼
             HStack {
                 Text("Mini Translator")
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .medium))
                 Spacer()
                 Button {
                     showExitAlert = true
                 } label: {
-                    Image(systemName: "xmark.circle")
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(BorderlessButtonStyle())
+                .buttonStyle(.plain)
             }
 
-            // 입력 필드 (앱 실행 시 자동 포커스를 받도록 설정)
-            TextField("번역할 내용을 입력하세요.", text: $inputText)
-                .focused($isTextFieldFocused)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .onSubmit { triggerTranslation() }
-                .onAppear { isTextFieldFocused = true }
+            // 입력 필드
+            VStack(spacing: 4) {
+                TextField("번역할 텍스트를 입력하세요", text: $inputText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(nsColor: .textBackgroundColor))
+                    )
+                    .focused($isTextFieldFocused)
+                    .onSubmit { triggerTranslation() }
+                    .onAppear { isTextFieldFocused = true }
+            }
 
-            // 언어 선택 영역 (원본과 번역 피커, 스왑 버튼 포함)
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("원본")
-                        .font(.caption)
-                    Picker("", selection: $sourceOption) {
-                        ForEach(Self.languageOptions) { option in
-                            Text(option.displayName).tag(option)
-                        }
+            // 언어 선택 영역 (원본/목적어 + 스왑 버튼)
+            HStack(spacing: 4) {
+                Picker("", selection: $sourceOption) {
+                    ForEach(Self.languageOptions) { option in
+                        Text(option.displayName).tag(option)
                     }
-                    .labelsHidden()
-                    .pickerStyle(MenuPickerStyle())
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
 
                 Button {
                     swap(&sourceOption, &targetOption)
                 } label: {
-                    Image(systemName: "arrow.left.arrow.right")
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(BorderlessButtonStyle())
+                .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("번역")
-                        .font(.caption)
-                    Picker("", selection: $targetOption) {
-                        ForEach(Self.languageOptions) { option in
-                            Text(option.displayName).tag(option)
-                        }
+                Picker("", selection: $targetOption) {
+                    ForEach(Self.languageOptions) { option in
+                        Text(option.displayName).tag(option)
                     }
-                    .labelsHidden()
-                    .pickerStyle(MenuPickerStyle())
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
             }
 
-            // 번역 결과 영역 (클립보드 복사 버튼 추가)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("번역 결과:")
-                        .font(.subheadline)
-                    Spacer()
-                    if !translatedText.isEmpty {
-                        Button {
-                            copyToClipboard(translatedText)
-                        } label: {
-                            // didCopy가 true이면 체크 아이콘, 아니면 기본 복사 아이콘 표시
-                            Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                    }
-                }
+            // 번역 결과 영역
+            ZStack(alignment: .topTrailing) {
                 ScrollView {
                     Text(translatedText)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(4)
+                        .padding(8)
                 }
                 .frame(height: 80)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray, lineWidth: 1))
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(nsColor: .textBackgroundColor))
+                )
+
+                // 복사 버튼 (내용이 있을 때만 표시)
+                if !translatedText.isEmpty {
+                    Button {
+                        copyToClipboard(translatedText)
+                    } label: {
+                        Image(systemName: didCopy ? "checkmark.circle.fill" : "doc.on.doc")
+                            .foregroundStyle(.secondary)
+                            .padding(8)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
-            // 번역 및 초기화 버튼 영역
-            HStack(spacing: 8) {
-                Button("초기화") {
+            // 버튼 영역
+            HStack(spacing: 12) {
+                Button {
                     reset()
+                } label: {
+                    Label("초기화", systemImage: "arrow.counterclockwise")
                 }
-                // 커멘드 + D 단축키 지정
                 .keyboardShortcut("d", modifiers: [.command])
-                .buttonStyle(DefaultButtonStyle())
+                .buttonStyle(.bordered)
 
                 Button("번역하기") {
                     triggerTranslation()
                 }
-                .buttonStyle(DefaultButtonStyle())
+                .buttonStyle(.borderedProminent)
             }
 
-            // 에러 메시지 표시 (모든 에러 상황은 고정된 메시지로 표시)
+            // 에러 메시지 표시 (모든 에러 상황은 고정된 메시지로)
             if let errorMessage {
                 Text(errorMessage)
                     .foregroundColor(.red)
@@ -188,13 +194,13 @@ struct TranslatorContentView: View {
         } message: {
             Text("정말로 앱을 종료하시겠습니까?")
         }
-        // 모델 다운로드 진행 중 알림 (최초 한 번만 표시)
+        // 모델 다운로드 진행 중 알림
         .alert("모델 다운로드 진행 중", isPresented: $showDownloadProgressAlert) {
             Button("확인") { showDownloadProgressAlert = false }
         } message: {
             Text("번역 모델 다운로드가 진행 중입니다. 잠시만 기다려주세요.")
         }
-        // 모델 다운로드 완료 알림 (최초 한 번만 표시; UserDefaults에 저장하여 앱 재실행 시에도 유지)
+        // 모델 다운로드 완료 알림
         .alert("모델 다운로드 완료", isPresented: $showDownloadCompleteAlert) {
             Button("확인") { }
         } message: {
@@ -213,7 +219,7 @@ struct TranslatorContentView: View {
             target: targetOption.language
         )
 
-        // 언어 페어링별로 고유한 UserDefaults 키 생성 (예: "didShowDownloadCompleteAlert_ja_zh-Hans")
+        // 언어 페어링별로 고유한 UserDefaults 키 생성
         let downloadCompleteKey = "didShowDownloadCompleteAlert_\(sourceOption.language.identifier)_\(targetOption.language.identifier)"
 
         Task {
@@ -268,7 +274,7 @@ struct TranslatorContentView: View {
         pasteBoard.clearContents()
         pasteBoard.setString(text, forType: .string)
 
-        // 복사 성공 시 didCopy를 true로 설정한 뒤, 2초 후 원래 상태로 복귀
+        // 복사 성공 시 didCopy를 true로 설정한 뒤, 일정 시간 후 false로 되돌리기
         didCopy = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             didCopy = false
