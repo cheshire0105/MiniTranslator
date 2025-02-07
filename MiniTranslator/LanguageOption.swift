@@ -42,6 +42,12 @@ struct TranslatorContentView: View {
     /// **모델 다운로드 진행 중 알림을 이미 한 번 표시했는지** 여부 (앱 내부에서만 사용)
     @State private var didShowDownloadProgressAlert: Bool = false
 
+    // 클립보드 복사 성공 여부 상태 변수 (복사 후 체크 아이콘 표시)
+    @State private var didCopy: Bool = false
+
+    // 텍스트 필드에 포커스 여부 상태 (앱 실행 시 자동 포커스용)
+    @FocusState private var isTextFieldFocused: Bool
+
     // 언어 옵션 배열 (예시: 한국어, 영어, 일본어, 중국어 간체)
     private static let languageOptions: [LanguageOption] = [
         LanguageOption(id: "ko", displayName: "한국어", language: Locale.Language(identifier: "ko")),
@@ -69,10 +75,12 @@ struct TranslatorContentView: View {
                 .buttonStyle(BorderlessButtonStyle())
             }
 
-            // 입력 필드
+            // 입력 필드 (앱 실행 시 자동 포커스를 받도록 설정)
             TextField("번역할 내용을 입력하세요.", text: $inputText)
+                .focused($isTextFieldFocused)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .onSubmit { triggerTranslation() }
+                .onAppear { isTextFieldFocused = true }
 
             // 언어 선택 영역 (원본과 번역 피커, 스왑 버튼 포함)
             HStack(spacing: 8) {
@@ -118,7 +126,8 @@ struct TranslatorContentView: View {
                         Button {
                             copyToClipboard(translatedText)
                         } label: {
-                            Image(systemName: "doc.on.doc")
+                            // didCopy가 true이면 체크 아이콘, 아니면 기본 복사 아이콘 표시
+                            Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
                         }
                         .buttonStyle(BorderlessButtonStyle())
                     }
@@ -134,10 +143,17 @@ struct TranslatorContentView: View {
 
             // 번역 및 초기화 버튼 영역
             HStack(spacing: 8) {
-                Button("초기화") { reset() }
-                    .buttonStyle(DefaultButtonStyle())
-                Button("번역하기") { triggerTranslation() }
-                    .buttonStyle(DefaultButtonStyle())
+                Button("초기화") {
+                    reset()
+                }
+                // 커멘드 + D 단축키 지정
+                .keyboardShortcut("d", modifiers: [.command])
+                .buttonStyle(DefaultButtonStyle())
+
+                Button("번역하기") {
+                    triggerTranslation()
+                }
+                .buttonStyle(DefaultButtonStyle())
             }
 
             // 에러 메시지 표시 (모든 에러 상황은 고정된 메시지로 표시)
@@ -242,6 +258,8 @@ struct TranslatorContentView: View {
         errorMessage = nil
         translationConfig = nil
         needToRetryTranslation = false
+        // 초기화 후 입력 필드에 포커스 부여
+        isTextFieldFocused = true
     }
 
     @available(macOS 15.0, *)
@@ -249,6 +267,12 @@ struct TranslatorContentView: View {
         let pasteBoard = NSPasteboard.general
         pasteBoard.clearContents()
         pasteBoard.setString(text, forType: .string)
+
+        // 복사 성공 시 didCopy를 true로 설정한 뒤, 2초 후 원래 상태로 복귀
+        didCopy = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            didCopy = false
+        }
     }
 }
 
