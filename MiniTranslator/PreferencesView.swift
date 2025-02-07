@@ -74,6 +74,25 @@ struct SettingsView: View {
             .font(.body)
             .foregroundColor(.secondary)
 
+            Divider()
+
+            // 단축키 안내 섹션 추가
+            VStack(alignment: .leading, spacing: 8) {
+                Text("단축키 안내")
+                    .font(.title2)
+                    .padding(.bottom, 4)
+                HStack {
+                    Text("번역 초기화:")
+                        .bold()
+                    Text("Command + D")
+                }
+                Text("해당 단축키를 누르면 입력 필드와 번역 결과가 초기화되며, 입력 필드에 자동으로 포커스가 이동합니다.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    // 텍스트가 줄바꿈되도록 고정 사이즈 모디파이어 추가
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Spacer()
         }
         .padding()
