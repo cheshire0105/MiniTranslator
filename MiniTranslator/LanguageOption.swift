@@ -1,6 +1,7 @@
 import SwiftUI
 import Translation
 import AppKit // 클립보드 복사용
+import NaturalLanguage // 언어 감지용
 
 // Locale.Language에 identifier 프로퍼티 추가
 extension Locale.Language {
@@ -60,6 +61,9 @@ struct TranslatorContentView: View {
     @State private var sourceOption: LanguageOption = TranslatorContentView.languageOptions[0]
     @State private var targetOption: LanguageOption = TranslatorContentView.languageOptions[1]
 
+    // 언어 감지기 추가
+    private let languageRecognizer = NLLanguageRecognizer()
+
     var body: some View {
         VStack(spacing: 10) {
             // 상단 헤더: 앱 타이틀 + 종료 버튼
@@ -89,6 +93,9 @@ struct TranslatorContentView: View {
                     .focused($isTextFieldFocused)
                     .onSubmit { triggerTranslation() }
                     .onAppear { isTextFieldFocused = true }
+                    .onChange(of: inputText) { newValue in
+                        detectLanguage(from: newValue)
+                    }
             }
 
             // 언어 선택 영역 (원본/목적어 + 스왑 버튼)
@@ -162,10 +169,10 @@ struct TranslatorContentView: View {
                 .buttonStyle(.borderedProminent)
             }
 
-            // 에러 메시지 표시 (모든 에러 상황은 고정된 메시지로)
+            // 에러 메시지 표시 (상황에 따라 색상 변경)
             if let errorMessage {
                 Text(errorMessage)
-                    .foregroundColor(.red)
+                    .foregroundColor(errorMessage == "입력과 출력 언어가 같아요" ? .secondary : .red)
                     .font(.caption)
             }
         }
@@ -212,6 +219,13 @@ struct TranslatorContentView: View {
     private func triggerTranslation() {
         translatedText = ""
         errorMessage = nil
+
+        // 소스와 타겟 언어가 같은 경우 안내 메시지 표시
+        if sourceOption.id == targetOption.id {
+            translatedText = inputText
+            errorMessage = "입력과 출력 언어가 같아요"
+            return
+        }
 
         translationRequestId += 1
         translationConfig = TranslationSession.Configuration(
@@ -279,6 +293,63 @@ struct TranslatorContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             didCopy = false
         }
+    }
+    
+    // 언어 자동 감지 함수 수정
+    private func detectLanguage(from text: String) {
+        // 텍스트가 너무 짧으면 감지하지 않음
+        guard text.count >= 3 else { return }
+        
+        languageRecognizer.processString(text)
+        guard let dominantLanguage = languageRecognizer.dominantLanguage else { return }
+        
+        // NLLanguage를 문자열로 변환
+        let languageCode = dominantLanguage.rawValue
+        
+        // 지원하는 언어 중에서 매칭되는 언어 찾기
+        if let matchedOption = Self.languageOptions.first(where: { option in
+            return option.id == languageCode || option.language.identifier == languageCode
+        }) {
+            // 현재 선택된 언어와 다르면 자동으로 변경
+            if sourceOption.id != matchedOption.id {
+                sourceOption = matchedOption
+                
+                // 소스와 타겟이 같아지면 자동으로 적절한 타겟 언어 선택
+                if sourceOption.id == targetOption.id {
+                    // 감지된 언어별로 적절한 타겟 언어 설정
+                    switch sourceOption.id {
+                    case "ko":
+                        // 한국어 -> 영어
+                        if let englishOption = Self.languageOptions.first(where: { $0.id == "en" }) {
+                            targetOption = englishOption
+                        }
+                    case "en":
+                        // 영어 -> 한국어
+                        if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
+                            targetOption = koreanOption
+                        }
+                    case "ja":
+                        // 일본어 -> 한국어
+                        if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
+                            targetOption = koreanOption
+                        }
+                    case "zh-Hans":
+                        // 중국어 -> 한국어
+                        if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
+                            targetOption = koreanOption
+                        }
+                    default:
+                        // 기본적으로 영어로 설정
+                        if let englishOption = Self.languageOptions.first(where: { $0.id == "en" }) {
+                            targetOption = englishOption
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 언어 감지기 초기화 (다음 감지를 위해)
+        languageRecognizer.reset()
     }
 }
 
