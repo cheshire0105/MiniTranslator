@@ -93,7 +93,7 @@ struct TranslatorContentView: View {
                     .focused($isTextFieldFocused)
                     .onSubmit { triggerTranslation() }
                     .onAppear { isTextFieldFocused = true }
-                    .onChange(of: inputText) { newValue in
+                    .onChange(of: inputText) { _, newValue in
                         detectLanguage(from: newValue)
                     }
             }
@@ -298,7 +298,7 @@ struct TranslatorContentView: View {
     // 언어 자동 감지 함수 수정
     private func detectLanguage(from text: String) {
         // 텍스트가 너무 짧으면 감지하지 않음
-        guard text.count >= 3 else { return }
+        guard text.count >= 2 else { return }
         
         languageRecognizer.processString(text)
         guard let dominantLanguage = languageRecognizer.dominantLanguage else { return }
@@ -306,13 +306,36 @@ struct TranslatorContentView: View {
         // NLLanguage를 문자열로 변환
         let languageCode = dominantLanguage.rawValue
         
+        // 디버깅을 위한 로그
+        print("감지된 언어 코드: \(languageCode)")
+        
         // 지원하는 언어 중에서 매칭되는 언어 찾기
-        if let matchedOption = Self.languageOptions.first(where: { option in
-            return option.id == languageCode || option.language.identifier == languageCode
-        }) {
+        // NLLanguage의 한국어 코드는 'ko'이므로 직접 매칭
+        var matchedOption: LanguageOption?
+        
+        switch languageCode {
+        case "ko":
+            matchedOption = Self.languageOptions.first { $0.id == "ko" }
+        case "en":
+            matchedOption = Self.languageOptions.first { $0.id == "en" }
+        case "ja":
+            matchedOption = Self.languageOptions.first { $0.id == "ja" }
+        case "zh-Hans", "zh-Hant", "zh":
+            matchedOption = Self.languageOptions.first { $0.id == "zh-Hans" }
+        default:
+            // 기본 매칭 로직
+            matchedOption = Self.languageOptions.first(where: { option in
+                return option.id == languageCode || option.language.identifier == languageCode
+            })
+        }
+        
+        if let matchedOption = matchedOption {
+            print("매칭된 언어: \(matchedOption.displayName)")
+            
             // 현재 선택된 언어와 다르면 자동으로 변경
             if sourceOption.id != matchedOption.id {
                 sourceOption = matchedOption
+                print("소스 언어 변경: \(matchedOption.displayName)")
                 
                 // 소스와 타겟이 같아지면 자동으로 적절한 타겟 언어 선택
                 if sourceOption.id == targetOption.id {
@@ -322,30 +345,37 @@ struct TranslatorContentView: View {
                         // 한국어 -> 영어
                         if let englishOption = Self.languageOptions.first(where: { $0.id == "en" }) {
                             targetOption = englishOption
+                            print("타겟 언어 변경: 영어")
                         }
                     case "en":
                         // 영어 -> 한국어
                         if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
                             targetOption = koreanOption
+                            print("타겟 언어 변경: 한국어")
                         }
                     case "ja":
                         // 일본어 -> 한국어
                         if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
                             targetOption = koreanOption
+                            print("타겟 언어 변경: 한국어")
                         }
                     case "zh-Hans":
                         // 중국어 -> 한국어
                         if let koreanOption = Self.languageOptions.first(where: { $0.id == "ko" }) {
                             targetOption = koreanOption
+                            print("타겟 언어 변경: 한국어")
                         }
                     default:
                         // 기본적으로 영어로 설정
                         if let englishOption = Self.languageOptions.first(where: { $0.id == "en" }) {
                             targetOption = englishOption
+                            print("타겟 언어 변경: 영어 (기본)")
                         }
                     }
                 }
             }
+        } else {
+            print("매칭되는 언어 없음: \(languageCode)")
         }
         
         // 언어 감지기 초기화 (다음 감지를 위해)
