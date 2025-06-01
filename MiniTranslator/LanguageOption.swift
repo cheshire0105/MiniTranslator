@@ -68,8 +68,8 @@ struct TranslatorContentView: View {
         VStack(spacing: 10) {
             // 상단 헤더: 앱 타이틀 + 종료 버튼
             HStack {
-                Text("Mini Translator")
-                    .font(.system(size: 15, weight: .medium))
+                Image(systemName: "globe")
+                    .imageScale(.large)
                 Spacer()
                 Button {
                     showExitAlert = true
