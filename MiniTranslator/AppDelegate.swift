@@ -3,7 +3,7 @@
 //  MiniTranslator
 //
 //  Created by cheshire on 1/29/25.
-//
+// 테스트
 
 import Cocoa
 import SwiftUI
